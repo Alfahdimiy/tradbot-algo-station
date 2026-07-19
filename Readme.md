@@ -1,3 +1,5 @@
+<img src="tradbot-v2-5.jpg" alt="TradBot Dashboard" width="600"/>
+
 # TRADBOT: Web3 Algo Trading Bot Simulator v2.5
 
 An interactive, high-performance Algorithmic Trading Backtester and Live Simulator. The system utilizes an asynchronous PHP WebSocket pipeline to stream real-time price tickers directly from the global exchange layer, evaluates multi-timeframe Exponential Moving Average (EMA) crossovers, logs state-persistent transactions to a MySQL ledger, and simulates decentralized Web3 smart contract escrow settlements.
