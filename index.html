@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Algo Trading Bot Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Header & Navigation -->
+    <header class="bg-[#0f172a] border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 z-10 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                <span class="material-icons text-2xl">trending_up</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    TRADBOT <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-mono uppercase tracking-widest font-semibold">Algo Bot v2.5</span>
+                </h1>
+                <p class="text-xs text-slate-400">Interactive Algorithmic Backtester & Live Simulator</p>
+            </div>
+        </div>
+        
+        <!-- Live Status Indicators -->
+        <div class="flex items-center space-x-6">
+            <div class="hidden sm:flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+                <span id="nodePulse" class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span id="nodeStatus" class="text-xs text-slate-300 font-medium">Bot Pipeline: Setup Mode</span>
+            </div>
+            <div class="flex space-x-2">
+                <button id="btnLive" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition duration-200 border border-slate-700 shadow-lg shadow-emerald-900/20">
+                    <span class="material-icons text-sm" id="liveIcon">play_arrow</span> <span id="liveText">START LIVE BOT</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area split into Dashboard & Visual Charts -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Side Control Parameters Console -->
+        <section class="w-full lg:w-80 bg-[#0d1324] border-r border-slate-800 p-5 flex flex-col overflow-y-auto space-y-6">
+            <!-- Currency Selection -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <span class="material-icons text-sm text-cyan-400">currency_exchange</span> Target Currency Pair
+                </h3>
+                <select id="selectPair" class="w-full bg-[#0f172a] border border-slate-800 rounded-lg p-2 text-xs font-mono font-semibold text-white focus:outline-none focus:border-slate-700 cursor-pointer">
+                    <option value="BTC-USD" selected>BTC-USD (Bitcoin / US Dollar)</option>
+                </select>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <span class="material-icons text-sm text-emerald-400">tune</span> Engine Parameters
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Initial Sandbox Capital</span>
+                            <span class="text-emerald-400 font-mono font-semibold" id="valCapital">$1,000</span>
+                        </label>
+                        <input type="range" id="inputCapital" min="100" max="10000" step="100" value="1000" class="w-full accent-emerald-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Base Asset Price (USD)</span>
+                            <span class="text-emerald-400 font-mono font-semibold" id="valBasePrice">Awaiting Connection...</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Data Candlestick Depth</span>
+                            <span class="text-emerald-400 font-mono font-semibold" id="valCandles">300 Ticks</span>
+                        </label>
+                        <input type="range" id="inputCandles" min="100" max="500" step="25" value="300" class="w-full accent-emerald-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <span class="material-icons text-sm text-cyan-400">shield</span> Risk Rules Setup
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Hard Stop Loss</span>
+                            <span class="text-rose-400 font-mono font-semibold" id="valSL">1.0%</span>
+                        </label>
+                        <input type="range" id="inputSL" min="0.2" max="5.0" step="0.1" value="1.0" class="w-full accent-rose-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Take Profit target</span>
+                            <span class="text-emerald-400 font-mono font-semibold" id="valTP">2.0%</span>
+                        </label>
+                        <input type="range" id="inputTP" min="0.5" max="10.0" step="0.2" value="2.0" class="w-full accent-emerald-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <span class="material-icons text-sm text-purple-400">timeline</span> Technical Setup
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Fast Execution EMA</span>
+                            <span class="text-cyan-400 font-mono font-semibold" id="valFastEMA">9 Periods</span>
+                        </label>
+                        <input type="range" id="inputFastEMA" min="3" max="25" step="1" value="9" class="w-full accent-cyan-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-slate-300 font-medium flex justify-between mb-1.5">
+                            <span>Slow Trend EMA</span>
+                            <span class="text-purple-400 font-mono font-semibold" id="valSlowEMA">50 Periods</span>
+                        </label>
+                        <input type="range" id="inputSlowEMA" min="20" max="100" step="5" value="50" class="w-full accent-purple-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Analytics & Charts Section -->
+        <section class="flex-1 flex flex-col overflow-hidden bg-[#090d16]">
+            
+            <!-- Real-Time Stats HUD Cards + Advanced Metrics Panels -->
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 p-4 bg-[#0a0f1b]/80 border-b border-slate-800">
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Wallet Balance</p>
+                    <p id="hudBalance" class="text-base md:text-lg font-bold font-mono text-white">$1,000.00</p>
+                </div>
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Net Yield</p>
+                    <p id="hudYield" class="text-base md:text-lg font-bold font-mono text-slate-400">+0.00%</p>
+                </div>
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Win Rate</p>
+                    <p id="hudWinRate" class="text-base md:text-lg font-bold font-mono text-cyan-400">0.0%</p>
+                </div>
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Total Orders</p>
+                    <p id="hudTotalTrades" class="text-base md:text-lg font-bold font-mono text-purple-400">0 Trades</p>
+                </div>
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Profit Factor</p>
+                    <p id="hudProfitFactor" class="text-base md:text-lg font-bold font-mono text-emerald-400">0.00</p>
+                </div>
+                <div class="bg-[#0f172a] border border-slate-800 p-3 rounded-xl shadow-lg">
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Max Drawdown</p>
+                    <p id="hudMaxDD" class="text-base md:text-lg font-bold font-mono text-rose-400">0.00%</p>
+                </div>
+            </div>
+
+            <!-- Visualization Canvas viewport -->
+            <div class="flex-1 relative min-h-[250px] border-b border-slate-800">
+                <canvas id="chartCanvas" class="absolute inset-0 w-full h-full block cursor-crosshair"></canvas>
+                
+                <!-- MT5 Overlay Controls (Timeframes + Zoom) -->
+                <div class="absolute top-4 right-4 flex items-center space-x-3 z-30">
+                    <!-- Timeframe Toggles -->
+                    <div class="bg-[#0d1324]/90 border border-slate-800 rounded-lg p-1 flex space-x-1 shadow-xl backdrop-blur-sm">
+                        <button id="tf-1m" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition">1M</button>
+                        <button id="tf-5m" class="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white transition">5M</button>
+                        <button id="tf-30m" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition">30M</button>
+                    </div>
+                    <!-- Zoom Controls -->
+                    <div class="bg-[#0d1324]/90 border border-slate-800 rounded-lg p-1 flex space-x-1 shadow-xl backdrop-blur-sm">
+                        <button id="zoom-in" class="p-1 text-slate-400 hover:text-white rounded transition flex items-center justify-center">
+                            <span class="material-icons text-sm">zoom_in</span>
+                        </button>
+                        <button id="zoom-out" class="p-1 text-slate-400 hover:text-white rounded transition flex items-center justify-center">
+                            <span class="material-icons text-sm">zoom_out</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legend Overlay -->
+                <div class="absolute top-4 left-4 bg-[#0d1324]/90 border border-slate-800 rounded-lg p-2.5 flex items-center space-x-4 text-[10px] sm:text-xs z-10 backdrop-blur-sm">
+                    <div class="flex items-center space-x-1"><span class="h-3 w-3 border border-emerald-500 bg-emerald-500/30 inline-block"></span> <span class="text-slate-300 font-medium">Candlesticks</span></div>
+                    <div id="legIndicators" class="flex items-center space-x-4 hidden">
+                        <div class="flex items-center space-x-1"><span class="h-0.5 w-4 bg-cyan-400 inline-block"></span> <span class="text-slate-300 font-medium">EMA 9</span></div>
+                        <div class="flex items-center space-x-1"><span class="h-0.5 w-4 bg-purple-500 inline-block"></span> <span class="text-slate-300 font-medium">EMA 50</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lower Container Side-by-Side: Equity Chart and Ledger Lists -->
+            <div class="h-48 bg-[#080c14] flex flex-col md:flex-row border-t border-slate-800">
+                <!-- Equity Curve Graph Window Wrapper -->
+                <div class="w-full md:w-1/3 border-r border-slate-800 flex flex-col relative bg-[#090d17]">
+                    <div class="px-4 py-2 border-b border-slate-800 bg-[#0a0f1b] text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="material-icons text-xs text-emerald-400">show_chart</span> Visual Balance Equity Curve
+                    </div>
+                    <div class="flex-1 relative">
+                        <canvas id="equityCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- Execution Transaction Logs Block -->
+                <div class="flex-1 flex flex-col">
+                    <div class="px-5 py-2 border-b border-slate-800 flex items-center justify-between bg-[#0a0f1b]">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <span class="material-icons text-sm text-purple-400">receipt_long</span> Bot Execution Ledger
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono" id="logCount">0 logs available</span>
+                    </div>
+                    <div id="ledgerLogList" class="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs">
+                        <div class="text-slate-500 italic py-1">Dashboard Ready. Setup parameters and click "START LIVE BOT".</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            INITIAL_CAPITAL: 1000,
+            BASE_PRICE: 0,
+            CANDLE_COUNT: 300,
+            STOP_LOSS_PCT: 0.01,
+            TAKE_PROFIT_PCT: 0.02,
+            FAST_PERIOD: 9,
+            SLOW_PERIOD: 50,
+            candles: [],
+            emaFast: [],
+            emaSlow: [],
+            trades: [],
+            liveMode: false, 
+            socket: null,
+            zoomLevel: 1.0,  
+            currentTimeframe: '5m'
+        };
+
+        // DOM Elements
+        const inputCapital = document.getElementById('inputCapital');
+        const inputCandles = document.getElementById('inputCandles');
+        const inputSL = document.getElementById('inputSL');
+        const inputTP = document.getElementById('inputTP');
+        const inputFastEMA = document.getElementById('inputFastEMA');
+        const inputSlowEMA = document.getElementById('inputSlowEMA');
+
+        const valCapital = document.getElementById('valCapital');
+        const valBasePrice = document.getElementById('valBasePrice');
+        const valCandles = document.getElementById('valCandles');
+        const valSL = document.getElementById('valSL');
+        const valTP = document.getElementById('valTP');
+        const valFastEMA = document.getElementById('valFastEMA');
+        const valSlowEMA = document.getElementById('valSlowEMA');
+
+        const hudBalance = document.getElementById('hudBalance');
+        const hudYield = document.getElementById('hudYield');
+        const hudWinRate = document.getElementById('hudWinRate');
+        const hudTotalTrades = document.getElementById('hudTotalTrades');
+        const hudProfitFactor = document.getElementById('hudProfitFactor');
+        const hudMaxDD = document.getElementById('hudMaxDD');
+        const ledgerLogList = document.getElementById('ledgerLogList');
+        const logCount = document.getElementById('logCount');
+
+        const btnLive = document.getElementById('btnLive');
+        const liveIcon = document.getElementById('liveIcon');
+        const liveText = document.getElementById('liveText');
+        const nodeStatus = document.getElementById('nodeStatus');
+        const nodePulse = document.getElementById('nodePulse');
+        const legIndicators = document.getElementById('legIndicators');
+        
+        const chartCanvas = document.getElementById('chartCanvas');
+        const ctx = chartCanvas.getContext('2d');
+        const equityCanvas = document.getElementById('equityCanvas');
+        const eqCtx = equityCanvas.getContext('2d');
+
+        function calculateEMA(candles, period) {
+            const emaArray = [];
+            const multiplier = 2 / (period + 1);
+            for (let i = 0; i < candles.length; i++) {
+                if (i === 0) {
+                    emaArray.push(candles[i].close); 
+                } else {
+                    const currentEMA = (candles[i].close - emaArray[i - 1]) * multiplier + emaArray[i - 1];
+                    emaArray.push(parseFloat(currentEMA.toFixed(2)));
+                }
+            }
+            return emaArray;
+        }
+
+        // --- Fixed Auto-Scaling Equity Curve Graph Render Engine ---
+        function drawEquityCurve() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = equityCanvas.getBoundingClientRect();
+            equityCanvas.width = rect.width * dpr;
+            equityCanvas.height = rect.height * dpr;
+            eqCtx.scale(dpr, dpr);
+
+            const w = rect.width;
+            const h = rect.height;
+            eqCtx.clearRect(0, 0, w, h);
+
+            let points = [state.INITIAL_CAPITAL];
+            state.trades.forEach(t => {
+                if (t.type.startsWith('SELL') && t.balance > 0) {
+                    points.push(t.balance);
+                }
+            });
+
+            if (points.length < 2) {
+                eqCtx.fillStyle = '#475569';
+                eqCtx.font = '10px font-mono';
+                eqCtx.textAlign = 'center';
+                eqCtx.fillText('Awaiting transaction ledger sets...', w / 2, h / 2);
+                return;
+            }
+
+            let minBal = Math.min(...points);
+            let maxBal = Math.max(...points);
+            
+            // Prevent division by zero if balance variation is microscopic
+            let balRange = maxBal - minBal;
+            if (balRange < 1) {
+                minBal -= 5;
+                maxBal += 5;
+                balRange = maxBal - minBal;
+            }
+
+            // Draw Subtle Horizontal Background Grid Guidelines
+            eqCtx.strokeStyle = '#1e293b';
+            eqCtx.lineWidth = 0.5;
+            eqCtx.setLineDash([2, 2]);
+            for(let i = 1; i <= 3; i++) {
+                let yGrid = (h / 4) * i;
+                eqCtx.beginPath();
+                eqCtx.moveTo(10, yGrid);
+                eqCtx.lineTo(w - 10, yGrid);
+                eqCtx.stroke();
+            }
+            eqCtx.setLineDash([]);
+
+            // Plot and render the stylized balance path line
+            eqCtx.strokeStyle = '#10b981';
+            eqCtx.lineWidth = 2.5;
+            eqCtx.beginPath();
+
+            points.forEach((bal, idx) => {
+                let x = 15 + (idx / (points.length - 1)) * (w - 30);
+                // Dynamically offset with a 15px inner padding safety boundary
+                let y = 15 + (h - 30) - ((bal - minBal) / balRange) * (h - 30);
+                if (idx === 0) eqCtx.moveTo(x, y);
+                else eqCtx.lineTo(x, y);
+            });
+            eqCtx.stroke();
+        }
+
+        // --- Dynamic Strategy Performance Analytics Calculation Engine ---
+        function updateMetrics(finalBalance) {
+            hudBalance.textContent = `$${finalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const netYield = ((finalBalance - state.INITIAL_CAPITAL) / state.INITIAL_CAPITAL) * 100;
+            hudYield.textContent = `${netYield >= 0 ? '+' : ''}${netYield.toFixed(2)}%`;
+            hudYield.className = `text-base md:text-lg font-bold font-mono ${netYield >= 0 ? 'text-emerald-400' : 'text-rose-500'}`;
+
+            const closedTrades = state.trades.filter(t => t.type.startsWith('SELL') || t.type === 'SETTLED');
+            const winningTrades = closedTrades.filter(t => t.profitPercent > 0);
+            const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+            
+            hudWinRate.textContent = `${winRate.toFixed(1)}%`;
+            hudTotalTrades.textContent = `${state.trades.length} Orders`;
+
+            // Crunch dynamic risk analysis metrics
+            let grossProfits = 0;
+            let grossLosses = 0;
+            let peak = state.INITIAL_CAPITAL;
+            let maxDD = 0;
+            let currentRunningBal = state.INITIAL_CAPITAL;
+
+            state.trades.forEach(t => {
+                if (t.type.startsWith('SELL')) {
+                    if (t.profitPercent > 0) grossProfits += (currentRunningBal * (t.profitPercent / 100));
+                    else grossLosses += Math.abs(currentRunningBal * (t.profitPercent / 100));
+                    
+                    currentRunningBal = t.balance > 0 ? t.balance : currentRunningBal;
+                    if (currentRunningBal > peak) peak = currentRunningBal;
+                    let dd = ((peak - currentRunningBal) / peak) * 100;
+                    if (dd > maxDD) maxDD = dd;
+                }
+            });
+
+            const pf = grossLosses === 0 ? (grossProfits > 0 ? "99.9" : "0.00") : (grossProfits / grossLosses).toFixed(2);
+            hudProfitFactor.textContent = pf;
+            hudMaxDD.textContent = `${maxDD.toFixed(2)}%`;
+
+            drawEquityCurve();
+        }
+
+        // --- Render Dynamic Block Explorer Links on Visual Tables ---
+        function updateLedger() {
+            if (state.trades.length === 0) {
+                ledgerLogList.innerHTML = `<div class="text-slate-500 italic py-1">Awaiting strategy executions...</div>`;
+                logCount.textContent = '0 logs available';
+                return;
+            }
+
+            ledgerLogList.innerHTML = '';
+            state.trades.forEach(trade => {
+                const logItem = document.createElement('div');
+                logItem.className = 'flex items-center justify-between border-b border-slate-900 pb-1.5 pt-0.5';
+                
+                let icon = '', typeText = '', detailsText = '', badgeClass = '';
+                const formattedTime = new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                if (trade.type === 'BUY') {
+                    icon = '🟢';
+                    typeText = 'BUY ORDER EXECUTION';
+                    badgeClass = 'text-emerald-400';
+                    detailsText = `Acquired Asset at $${trade.price.toFixed(2)}`;
+                } else {
+                    badgeClass = trade.profitPercent >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                    const profitText = `${trade.profitPercent >= 0 ? '+' : ''}${trade.profitPercent.toFixed(2)}%`;
+                    
+                    if (trade.type === 'SELL_SL') {
+                        icon = '🛡️';
+                        typeText = 'HARD STOP LOSS';
+                        detailsText = `Terminated position on breach at $${trade.price.toFixed(2)} (${profitText})`;
+                    } else if (trade.type === 'SELL_TP') {
+                        icon = '🎯';
+                        typeText = 'TAKE PROFIT TARGET';
+                        detailsText = `Sold and locked profits at $${trade.price.toFixed(2)} (${profitText})`;
+                    } else if (trade.type === 'SELL_EMA') {
+                        icon = '🔴';
+                        typeText = 'EMA GRACEFUL EXIT';
+                        detailsText = `Closed on crossover drop at $${trade.price.toFixed(2)} (${profitText})`;
+                    } else {
+                        icon = '📦';
+                        typeText = 'AUTO SETTLEMENT EXIT';
+                        detailsText = `Settled at close price at $${trade.price.toFixed(2)} (${profitText})`;
+                    }
+                }
+
+                // Append contract receipts explicitly down the visual log entries
+                let web3Anchor = '';
+                if (trade.txHash) {
+                    web3Anchor = `<a href="https://etherscan.io/tx/${trade.txHash}" target="_blank" class="text-cyan-400 hover:underline ml-2 font-mono text-[10px] bg-cyan-500/10 px-1.5 py-0.5 rounded">🔗 ${trade.txHash.substring(0,8)}...</a>`;
+                }
+
+                logItem.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span>${icon}</span>
+                        <div>
+                            <span class="font-semibold ${badgeClass}">${typeText}</span>
+                            <span class="text-slate-400 block sm:inline sm:ml-2">${detailsText}</span>
+                            ${web3Anchor}
+                        </div>
+                    </div>
+                    <span class="text-slate-500 text-[10px] whitespace-nowrap">${formattedTime}</span>
+                `;
+                ledgerLogList.appendChild(logItem);
+            });
+            
+            ledgerLogList.scrollTop = ledgerLogList.scrollHeight;
+            logCount.textContent = `${state.trades.length} execution logs available`;
+        }
+
+        // --- Premium Japanese Candlestick Visual Drawing Engine ---
+        function renderChart() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = chartCanvas.getBoundingClientRect();
+            chartCanvas.width = rect.width * dpr;
+            chartCanvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, width, height);
+
+            if (state.candles.length === 0) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '13px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('📡 Connecting to live market server stream...', width / 2, height / 2);
+                return;
+            }
+
+            const paddingLeft = 30;
+            const paddingRight = 75;
+            const paddingTop = 30;
+            const paddingBottom = 40;
+
+            const chartWidth = width - paddingLeft - paddingRight;
+            const chartHeight = height - paddingTop - paddingBottom;
+
+            const baseVisibleCount = state.candles.length;
+            const visibleCount = Math.max(12, Math.floor(baseVisibleCount * state.zoomLevel));
+            const startIndex = Math.max(0, state.candles.length - visibleCount);
+            
+            const activeCandles = state.candles.slice(startIndex);
+            const activeEmaFast = state.emaFast.slice(startIndex);
+            const activeEmaSlow = state.emaSlow.slice(startIndex);
+
+            let minPrice = Infinity;
+            let maxPrice = -Infinity;
+
+            activeCandles.forEach(c => {
+                if (c.low < minPrice) minPrice = c.low;
+                if (c.high > maxPrice) maxPrice = c.high;
+            });
+
+            if (state.liveMode) {
+                activeEmaFast.forEach(val => {
+                    if (val && val < minPrice) minPrice = val;
+                    if (val && val > maxPrice) maxPrice = val;
+                });
+                activeEmaSlow.forEach(val => {
+                    if (val && val < minPrice) minPrice = val;
+                    if (val && val > maxPrice) maxPrice = val;
+                });
+            }
+
+            const priceMargin = (maxPrice - minPrice) * 0.08 || 50;
+            minPrice -= priceMargin;
+            maxPrice += priceMargin;
+
+            const getX = (index) => paddingLeft + (index / (activeCandles.length - 1)) * chartWidth;
+            const getY = (price) => paddingTop + chartHeight - ((price - minPrice) / (maxPrice - minPrice)) * chartHeight;
+
+            // Background Grid Lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.font = '10px font-mono';
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'left';
+
+            const gridLines = 5;
+            for (let i = 0; i < gridLines; i++) {
+                const ratio = i / (gridLines - 1);
+                const price = minPrice + ratio * (maxPrice - minPrice);
+                const y = getY(price);
+                
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(width - paddingRight, y);
+                ctx.stroke();
+
+                ctx.fillText(`$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, width - paddingRight + 5, y + 3);
+            }
+            ctx.setLineDash([]); 
+
+            const candleSpace = chartWidth / activeCandles.length;
+            const candleWidth = Math.max(2, candleSpace * 0.75);
+
+            // --- DRAW JAPANESE CANDLESTICKS ---
+            for (let i = 0; i < activeCandles.length; i++) {
+                const candle = activeCandles[i];
+                const x = getX(i);
+                
+                const yOpen = getY(candle.open);
+                const yClose = getY(candle.close);
+                const yHigh = getY(candle.high);
+                const yLow = getY(candle.low);
+                
+                const isBullish = candle.close >= candle.open;
+                const candleColor = isBullish ? '#10b981' : '#f43f5e'; 
+
+                ctx.strokeStyle = candleColor;
+                ctx.lineWidth = Math.max(1.2, candleWidth * 0.12);
+                ctx.beginPath();
+                ctx.moveTo(x, yHigh);
+                ctx.lineTo(x, yLow);
+                ctx.stroke();
+
+                ctx.fillStyle = candleColor;
+                const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+                const bodyTop = Math.min(yOpen, yClose);
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+            }
+
+            // --- STRATEGY INDICATORS & EXECUTIONS ---
+            if (state.liveMode) {
+                ctx.setLineDash([]);
+                
+                // Slow EMA 50 (Purple)
+                ctx.beginPath();
+                ctx.strokeStyle = '#a855f7'; 
+                ctx.lineWidth = 2;
+                let firstSlowDraw = true;
+                for (let i = 0; i < activeEmaSlow.length; i++) {
+                    if (activeEmaSlow[i] !== undefined && !isNaN(activeEmaSlow[i])) {
+                        const x = getX(i);
+                        const y = getY(activeEmaSlow[i]);
+                        if (firstSlowDraw) { ctx.moveTo(x, y); firstSlowDraw = false; }
+                        else ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // Fast EMA 9 (Cyan)
+                ctx.beginPath();
+                ctx.strokeStyle = '#06b6d4'; 
+                ctx.lineWidth = 2;
+                let firstFastDraw = true;
+                for (let i = 0; i < activeEmaFast.length; i++) {
+                    if (activeEmaFast[i] !== undefined && !isNaN(activeEmaFast[i])) {
+                        const x = getX(i);
+                        const y = getY(activeEmaFast[i]);
+                        if (firstFastDraw) { ctx.moveTo(x, y); firstFastDraw = false; }
+                        else ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // Trade Markers and execution target tracking lines
+                state.trades.forEach(trade => {
+                    const activeIndex = trade.index - startIndex;
+                    if (activeIndex >= 0 && activeIndex < activeCandles.length) {
+                        const x = getX(activeIndex);
+                        const y = getY(trade.price);
+
+                        ctx.strokeStyle = trade.type === 'BUY' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)';
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([2, 2]);
+                        ctx.beginPath();
+                        ctx.moveTo(paddingLeft, y);
+                        ctx.lineTo(width - paddingRight, y);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        if (trade.type === 'BUY') {
+                            ctx.fillStyle = '#10b981';
+                            ctx.beginPath();
+                            ctx.moveTo(x, y - 11);
+                            ctx.lineTo(x - 6, y + 2);
+                            ctx.lineTo(x + 6, y + 2);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.arc(x, y - 3, 9, 0, Math.PI * 2);
+                            ctx.stroke();
+                        } else if (trade.type.startsWith('SELL')) {
+                            ctx.fillStyle = '#f43f5e';
+                            ctx.beginPath();
+                            ctx.moveTo(x, y + 11);
+                            ctx.lineTo(x - 6, y - 2);
+                            ctx.lineTo(x + 6, y - 2);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            ctx.strokeStyle = trade.type === 'SELL_TP' ? '#f59e0b' : '#ef4444';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.arc(x, y + 3, 9, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateStateFromInputs() {
+            state.INITIAL_CAPITAL = parseFloat(inputCapital.value);
+            state.CANDLE_COUNT = parseInt(inputCandles.value);
+            state.STOP_LOSS_PCT = parseFloat(inputSL.value) / 100;
+            state.TAKE_PROFIT_PCT = parseFloat(inputTP.value) / 100;
+            state.FAST_PERIOD = parseInt(inputFastEMA.value);
+            state.SLOW_PERIOD = parseInt(inputSlowEMA.value);
+
+            valCapital.textContent = `$${state.INITIAL_CAPITAL.toLocaleString()}`;
+            valCandles.textContent = `${state.CANDLE_COUNT} Ticks`;
+            valSL.textContent = `${inputSL.value}%`;
+            valTP.textContent = `${inputTP.value}%`;
+            valFastEMA.textContent = `${state.FAST_PERIOD} P`;
+            valSlowEMA.textContent = `${state.SLOW_PERIOD} P`;
+        }
+
+        // --- INSTANT DYNAMIC SLIDER UPDATE TRANSACTION ---
+        function sendUpdatedSettingsToServer() {
+            if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+                state.socket.send(JSON.stringify({
+                    type: 'UPDATE_SETTINGS',
+                    initial_capital: state.INITIAL_CAPITAL,
+                    stop_loss_pct: state.STOP_LOSS_PCT,
+                    take_profit_pct: state.TAKE_PROFIT_PCT,
+                    fast_period: state.FAST_PERIOD,
+                    slow_period: state.SLOW_PERIOD
+                }));
+            }
+        }
+
+        function handleInputChanges() {
+            updateStateFromInputs();
+            if (state.candles.length > 0) {
+                state.emaFast = calculateEMA(state.candles, state.FAST_PERIOD);
+                state.emaSlow = calculateEMA(state.candles, state.SLOW_PERIOD);
+                renderChart();
+            }
+            sendUpdatedSettingsToServer();
+        }
+
+        // Zoom Click Events
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            state.zoomLevel = Math.max(0.08, state.zoomLevel - 0.12); 
+            renderChart();
+        });
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            state.zoomLevel = Math.min(2.5, state.zoomLevel + 0.12); 
+            renderChart();
+        });
+
+        // Timeframe selector configurations
+        ['1m', '5m', '30m'].forEach(tf => {
+            document.getElementById(`tf-${tf}`).addEventListener('click', (e) => {
+                ['1m', '5m', '30m'].forEach(x => {
+                    document.getElementById(`tf-${x}`).className = "px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition";
+                });
+                e.target.className = "px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white transition";
+                state.currentTimeframe = tf;
+            });
+        });
+
+        // Changed event listeners from 'change' to 'input' for live instant database updates
+        const controls = [inputCapital, inputCandles, inputSL, inputTP, inputFastEMA, inputSlowEMA];
+        controls.forEach(ctrl => ctrl.addEventListener('input', handleInputChanges));
+
+        // --- WebSocket Direct Pipeline ---
+        function connectLiveWebSocket() {
+            state.socket = new WebSocket('ws://localhost:8080');
+
+            state.socket.onmessage = (event) => {
+                const payload = JSON.parse(event.data);
+                
+                // Dynamic Settings Synchronization on Load
+                if (payload.type === 'SETTINGS_SYNC') {
+                    const settings = payload.data;
+                    
+                    inputCapital.value = settings.initial_capital;
+                    inputSL.value = (settings.stop_loss_pct * 100).toFixed(1);
+                    inputTP.value = (settings.take_profit_pct * 100).toFixed(1);
+                    inputFastEMA.value = settings.fast_period;
+                    inputSlowEMA.value = settings.slow_period;
+                    
+                    updateStateFromInputs();
+                    renderChart();
+                }
+
+                // Track backend strategy activation signals 
+                if (payload.type === 'BOT_STATE_SYNC') {
+                    const data = payload.data ? payload.data : payload;
+                    state.liveMode = data.enabled;
+                    
+                    if (state.liveMode) {
+                        btnLive.className = "px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition duration-200 shadow-lg shadow-rose-900/20";
+                        liveIcon.textContent = "stop";
+                        liveText.textContent = "STOP LIVE BOT";
+                        nodeStatus.textContent = "Live Bot Engine: Active";
+                        nodePulse.className = "h-2 w-2 rounded-full bg-cyan-400 animate-pulse";
+                        legIndicators.classList.remove('hidden'); 
+                    } else {
+                        btnLive.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition duration-200 shadow-lg shadow-emerald-900/20";
+                        liveIcon.textContent = "play_arrow";
+                        liveText.textContent = "START LIVE BOT";
+                        nodeStatus.textContent = "Virtual Sandbox Node: Idle";
+                        nodePulse.className = "h-2 w-2 rounded-full bg-rose-500 animate-pulse";
+                        legIndicators.classList.add('hidden'); 
+                    }
+                    renderChart();
+                }
+
+                // Load Historical Candles and Database Logs Retention
+                if (payload.type === 'INIT_HISTORY') {
+                    state.candles = payload.candles ? payload.candles : payload.data;
+                    state.emaFast = calculateEMA(state.candles, state.FAST_PERIOD);
+                    state.emaSlow = calculateEMA(state.candles, state.SLOW_PERIOD);
+                    
+                    state.trades = [];
+                    if (payload.past_trades && payload.past_trades.length > 0) {
+                        payload.past_trades.forEach(t => {
+                            state.trades.push({
+                                type: t.type,
+                                index: state.candles.length - 15, 
+                                price: parseFloat(t.price),
+                                balance: parseFloat(t.balance),
+                                profitPercent: parseFloat(t.profit),
+                                txHash: t.txHash,
+                                timestamp: new Date(t.timestamp).getTime()
+                            });
+                        });
+                        
+                        const lastTrade = payload.past_trades[payload.past_trades.length - 1];
+                        updateMetrics(parseFloat(lastTrade.balance));
+                    } else {
+                        updateMetrics(state.INITIAL_CAPITAL);
+                    }
+                    
+                    updateLedger();
+                    renderChart();
+                }
+                
+                // Real-time market tick consumer
+                if (payload.type === 'LIVE_TICK') {
+                    if(state.candles.length > 0) {
+                        state.candles[state.candles.length - 1] = payload.data.candle;
+                    }
+                    state.BASE_PRICE = payload.data.candle.close;
+                    valBasePrice.textContent = `$${state.BASE_PRICE.toFixed(2)}`;
+                    
+                    state.emaFast = calculateEMA(state.candles, state.FAST_PERIOD);
+                    state.emaSlow = calculateEMA(state.candles, state.SLOW_PERIOD);
+                    renderChart();
+                }
+                
+                // Strategy order ledger logs execution
+                if (payload.type === 'TRADE_LOG') {
+                    const log = payload.data;
+                    state.trades.push({
+                        type: log.side,
+                        index: state.candles.length - 1,
+                        price: log.price,
+                        balance: log.balance,
+                        profitPercent: log.profit,
+                        txHash: log.txHash,
+                        timestamp: Date.now()
+                    });
+                    
+                    updateMetrics(log.balance);
+                    updateLedger();
+                    renderChart();
+                }
+            };
+
+            state.socket.onclose = () => {
+                console.log("WebSocket dropped. Reconnecting tunnel...");
+                setTimeout(connectLiveWebSocket, 3000);
+            };
+        }
+
+        btnLive.addEventListener('click', () => {
+            if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+                state.socket.send(JSON.stringify({ type: 'TOGGLE_BOT', enabled: !state.liveMode }));
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            renderChart();
+            drawEquityCurve();
+        });
+        
+        // --- Boot Sequence ---
+        window.onload = () => {
+            updateStateFromInputs();
+            connectLiveWebSocket();
+        };
+    </script>
+</body>
+</html>
